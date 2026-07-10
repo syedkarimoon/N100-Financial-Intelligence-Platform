@@ -150,8 +150,7 @@ class ETLPipeline:
                 )
 
         return True
-
-    # --------------------------------------------------
+        # --------------------------------------------------
     # Complete Pipeline
     # --------------------------------------------------
 
@@ -171,7 +170,6 @@ class ETLPipeline:
         # ---------------------------------------------
         # Load into SQLite Database
         # ---------------------------------------------
-
         print("Loading data into SQLite database...")
 
         sqlite_loader = SQLiteLoader()
@@ -186,13 +184,15 @@ class ETLPipeline:
         print("SQLite database created successfully.")
 
         # ---------------------------------------------
-        # Export Load Audit
+        # Create outputs folder
         # ---------------------------------------------
-
         Path("outputs").mkdir(
             exist_ok=True
         )
 
+        # ---------------------------------------------
+        # Export Load Audit
+        # ---------------------------------------------
         audit_df = pd.DataFrame(self.load_audit)
 
         audit_df.to_csv(
@@ -204,30 +204,17 @@ class ETLPipeline:
             "✓ Load audit saved to outputs/load_audit.csv"
         )
 
+        # ---------------------------------------------
+        # Export Validation Failures
+        # ---------------------------------------------
+        self.validator.export_failures(
+            "outputs/validation_failures.csv"
+        )
+
+        print(
+            "✓ Validation failures saved to outputs/validation_failures.csv"
+        )
+
         print("ETL Pipeline completed successfully")
 
         return dataframes
-
-    # --------------------------------------------------
-    # Test Interface
-    # --------------------------------------------------
-
-    def load_all(self):
-        """
-        Load all datasets.
-
-        Used by ETL tests.
-        """
-
-        return self.load_excel_files()
-
-    # --------------------------------------------------
-    # Load Audit Access
-    # --------------------------------------------------
-
-    def get_load_audit(self):
-        """
-        Return load audit list.
-        """
-
-        return self.load_audit
