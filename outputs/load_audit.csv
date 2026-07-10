@@ -1,0 +1,13 @@
+dataset,filename,rows,columns,status
+analysis,analysis.xlsx,21,6,SUCCESS
+balance_sheet,balancesheet.xlsx,1313,13,SUCCESS
+cash_flow,cashflow.xlsx,1188,7,SUCCESS
+companies,companies.xlsx,93,12,SUCCESS
+documents,documents.xlsx,1586,4,SUCCESS
+profit_and_loss,profitandloss.xlsx,1277,15,SUCCESS
+pros_and_cons,prosandcons.xlsx,17,4,SUCCESS
+financial_ratios,financial_ratios.xlsx,1184,16,SUCCESS
+market_cap,market_cap.xlsx,552,9,SUCCESS
+peer_groups,peer_groups.xlsx,56,4,SUCCESS
+sectors,sectors.xlsx,92,6,SUCCESS
+stock_prices,stock_prices.xlsx,5520,9,SUCCESS

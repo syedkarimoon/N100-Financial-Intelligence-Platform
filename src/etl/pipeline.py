@@ -31,24 +31,37 @@ class ETLPipeline:
 
     def load_excel_files(self):
         """
-        Load all Excel datasets from raw folder.
+        Load all Excel datasets from raw and supporting folders.
         """
 
         datasets = {}
 
+        raw_path = Path("data/raw")
+        supporting_path = Path("data/supporting")
+
         files = {
-            "analysis": "analysis.xlsx",
-            "balance_sheet": "balancesheet.xlsx",
-            "cash_flow": "cashflow.xlsx",
-            "companies": "companies.xlsx",
-            "documents": "documents.xlsx",
-            "profit_and_loss": "profitandloss.xlsx",
-            "pros_and_cons": "prosandcons.xlsx"
+
+            # Core datasets
+            "analysis": (raw_path, "analysis.xlsx"),
+            "balance_sheet": (raw_path, "balancesheet.xlsx"),
+            "cash_flow": (raw_path, "cashflow.xlsx"),
+            "companies": (raw_path, "companies.xlsx"),
+            "documents": (raw_path, "documents.xlsx"),
+            "profit_and_loss": (raw_path, "profitandloss.xlsx"),
+            "pros_and_cons": (raw_path, "prosandcons.xlsx"),
+
+            # Supporting datasets
+            "financial_ratios": (supporting_path, "financial_ratios.xlsx"),
+            "market_cap": (supporting_path, "market_cap.xlsx"),
+            "peer_groups": (supporting_path, "peer_groups.xlsx"),
+            "sectors": (supporting_path, "sectors.xlsx"),
+            "stock_prices": (supporting_path, "stock_prices.xlsx")
+
         }
 
-        for table, file_name in files.items():
+        for table, (folder, file_name) in files.items():
 
-            file_path = self.data_path / file_name
+            file_path = folder / file_name
 
             if file_path.exists():
 
@@ -58,7 +71,6 @@ class ETLPipeline:
 
                 datasets[table] = df
 
-                # Load Audit Record
                 self.load_audit.append(
                     {
                         "dataset": table,
@@ -118,10 +130,7 @@ class ETLPipeline:
 
             if {"company_id", "year"}.issubset(df.columns):
 
-                self.validator.validate_annual_pk(
-                    df,
-                    table
-                )
+                self.validator.validate_annual_pk(df, table)
 
                 self.validator.validate_foreign_key(
                     df,
@@ -129,15 +138,9 @@ class ETLPipeline:
                     table
                 )
 
-                self.validator.validate_year_format(
-                    df,
-                    table
-                )
+                self.validator.validate_year_format(df, table)
 
-                self.validator.validate_ticker_format(
-                    df,
-                    table
-                )
+                self.validator.validate_ticker_format(df, table)
 
             else:
 
@@ -159,7 +162,7 @@ class ETLPipeline:
 
         print("Starting ETL Pipeline...")
 
-        # Load all datasets
+        # Load datasets
         dataframes = self.load_excel_files()
 
         # Run validations
@@ -168,17 +171,39 @@ class ETLPipeline:
         # ---------------------------------------------
         # Load into SQLite Database
         # ---------------------------------------------
+
         print("Loading data into SQLite database...")
 
         sqlite_loader = SQLiteLoader()
 
         for table_name, dataframe in dataframes.items():
+
             sqlite_loader.load_dataframe(
                 dataframe,
                 table_name
             )
 
         print("SQLite database created successfully.")
+
+        # ---------------------------------------------
+        # Export Load Audit
+        # ---------------------------------------------
+
+        Path("outputs").mkdir(
+            exist_ok=True
+        )
+
+        audit_df = pd.DataFrame(self.load_audit)
+
+        audit_df.to_csv(
+            "outputs/load_audit.csv",
+            index=False
+        )
+
+        print(
+            "✓ Load audit saved to outputs/load_audit.csv"
+        )
+
         print("ETL Pipeline completed successfully")
 
         return dataframes
@@ -206,4 +231,3 @@ class ETLPipeline:
         """
 
         return self.load_audit
-    
