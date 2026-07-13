@@ -11,6 +11,7 @@ from pathlib import Path
 import pandas as pd
 
 from db.loader import SQLiteLoader
+from src.etl.loader import ExcelLoader
 from src.etl.validator import SchemaValidator
 
 
@@ -61,13 +62,12 @@ class ETLPipeline:
 
         for table, (folder, file_name) in files.items():
 
-            file_path = folder / file_name
+            print(f"Loading {file_name}...")
 
-            if file_path.exists():
+            try:
 
-                print(f"Loading {file_name}...")
-
-                df = pd.read_excel(file_path)
+                loader = ExcelLoader(folder)
+                df = loader.load_excel(file_name)
 
                 datasets[table] = df
 
@@ -86,7 +86,7 @@ class ETLPipeline:
                     f"{df.shape[0]} rows × {df.shape[1]} columns"
                 )
 
-            else:
+            except FileNotFoundError:
 
                 self.load_audit.append(
                     {
@@ -138,9 +138,17 @@ class ETLPipeline:
                     table
                 )
 
-                self.validator.validate_year_format(df, table)
+                self.validator.validate_year_format(
+                    df,
+                    table
+                )
 
-                self.validator.validate_ticker_format(df, table)
+                self.validator.validate_ticker_format(
+                    df,
+                    table
+                )
+
+                print(f"✓ Validation completed for {table}")
 
             else:
 
@@ -150,7 +158,8 @@ class ETLPipeline:
                 )
 
         return True
-        # --------------------------------------------------
+
+    # --------------------------------------------------
     # Complete Pipeline
     # --------------------------------------------------
 
@@ -170,6 +179,7 @@ class ETLPipeline:
         # ---------------------------------------------
         # Load into SQLite Database
         # ---------------------------------------------
+
         print("Loading data into SQLite database...")
 
         sqlite_loader = SQLiteLoader()
@@ -186,6 +196,7 @@ class ETLPipeline:
         # ---------------------------------------------
         # Create outputs folder
         # ---------------------------------------------
+
         Path("outputs").mkdir(
             exist_ok=True
         )
@@ -193,6 +204,7 @@ class ETLPipeline:
         # ---------------------------------------------
         # Export Load Audit
         # ---------------------------------------------
+
         audit_df = pd.DataFrame(self.load_audit)
 
         audit_df.to_csv(
@@ -207,6 +219,7 @@ class ETLPipeline:
         # ---------------------------------------------
         # Export Validation Failures
         # ---------------------------------------------
+
         self.validator.export_failures(
             "outputs/validation_failures.csv"
         )

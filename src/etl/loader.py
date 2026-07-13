@@ -12,7 +12,7 @@ from src.etl.normalizer import DataNormalizer
 
 class ExcelLoader:
     """
-    Reads Excel files from the raw data directory.
+    Reads Excel files from the raw and supporting data directories.
     """
 
     def __init__(self, data_directory: Path):
@@ -38,12 +38,33 @@ class ExcelLoader:
                 f"File not found: {file_path}"
             )
 
-        df = pd.read_excel(file_path, skiprows=1)
+        # Core datasets contain an extra title row
+        core_files = {
+            "analysis.xlsx",
+            "balancesheet.xlsx",
+            "cashflow.xlsx",
+            "companies.xlsx",
+            "documents.xlsx",
+            "profitandloss.xlsx",
+            "prosandcons.xlsx",
+        }
 
-        # Standardize column names
+        if filename.lower() in core_files:
+            df = pd.read_excel(file_path, skiprows=1)
+        else:
+            df = pd.read_excel(file_path)
+
+        # -----------------------------
+        # Debug Output (remove after testing)
+        # -----------------------------
+        # -----------------------------
+        # Normalize column names
+        # -----------------------------
         df = DataNormalizer.normalize_columns(df)
 
+        # -----------------------------
         # Remove duplicate records
+        # -----------------------------
         df = DataNormalizer.remove_duplicates(df)
 
         return df

@@ -1,0 +1,13 @@
+Table,Rows,Columns,Missing Values,Duplicate Rows
+analysis,20,6,0,0
+balance_sheet,1312,13,0,0
+cash_flow,1187,7,8,0
+companies,92,12,9,0
+documents,1585,4,52,0
+profit_and_loss,1276,15,231,0
+pros_and_cons,16,4,6,0
+financial_ratios,1184,16,170,0
+market_cap,552,9,0,0
+peer_groups,56,4,0,0
+sectors,92,6,0,0
+stock_prices,5520,9,0,0
