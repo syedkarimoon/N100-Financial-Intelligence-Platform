@@ -4,10 +4,10 @@ from src.etl.pipeline import ETLPipeline
 def test_pipeline():
     pipeline = ETLPipeline()
 
-    datasets = pipeline.load_all()
+    datasets = pipeline.load_excel_files()
 
-    assert len(datasets) == 7
-
+    assert len(datasets) == 12
+    
     for name, df in datasets.items():
         print(f"\n{name}")
         print(f"Rows    : {df.shape[0]}")
