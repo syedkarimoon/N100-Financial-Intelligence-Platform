@@ -162,3 +162,123 @@ class FinancialRatioEngine:
             "difference": round(difference, 2),
             "mismatch": difference > 1
         }
+    @staticmethod
+    def debt_to_equity(
+        borrowings: float,
+        equity_capital: float,
+        reserves: float
+    ) -> Optional[float]:
+        """
+        Calculate Debt-to-Equity Ratio.
+
+        Formula:
+            Borrowings / (Equity Capital + Reserves)
+
+        Returns:
+            0 if borrowings are zero.
+            None if total equity is less than or equal to zero.
+        """
+        if borrowings == 0:
+            return 0
+
+        total_equity = equity_capital + reserves
+
+        if total_equity <= 0:
+            return None
+
+        return borrowings / total_equity
+    @staticmethod
+    def high_leverage_flag(
+        debt_to_equity: Optional[float],
+        broad_sector: str
+    ) -> bool:
+        """
+        Determine whether a company has high leverage.
+
+        Returns:
+            True if D/E > 5 and company is not in Financials.
+            Otherwise False.
+        """
+        if debt_to_equity is None:
+            return False
+
+        if broad_sector.strip().lower() == "financials":
+            return False
+
+        return debt_to_equity > 5
+    @staticmethod
+    def interest_coverage_ratio(
+        operating_profit: float,
+        other_income: float,
+        interest: float
+    ) -> Optional[float]:
+        """
+        Calculate Interest Coverage Ratio (ICR).
+
+        Formula:
+            (Operating Profit + Other Income) / Interest
+
+        Returns:
+            None if interest is zero.
+        """
+        if interest == 0:
+            return None
+
+        return (operating_profit + other_income) / interest
+    @staticmethod
+    def icr_label(icr: Optional[float]) -> Optional[str]:
+        """
+        Return display label for Interest Coverage Ratio.
+
+        Returns:
+            "Debt Free" if ICR is None.
+            Otherwise None.
+        """
+        if icr is None:
+            return "Debt Free"
+
+        return None
+    @staticmethod
+    def icr_warning_flag(icr: Optional[float]) -> bool:
+        """
+        Determine whether Interest Coverage Ratio indicates risk.
+
+        Returns:
+            True if ICR < 1.5
+            False otherwise
+        """
+        if icr is None:
+            return False
+
+        return icr < 1.5
+    @staticmethod
+    def net_debt(
+        borrowings: float,
+        investments: float
+    ) -> float:
+        """
+        Calculate Net Debt.
+
+        Formula:
+            Borrowings - Investments
+        """
+        return borrowings - investments
+        
+    @staticmethod
+    def asset_turnover(
+        sales: float,
+        total_assets: float
+    ) -> Optional[float]:
+        """
+        Calculate Asset Turnover Ratio.
+
+        Formula:
+            Sales / Total Assets
+
+        Returns:
+            None if total assets are less than or equal to zero.
+        """
+        if total_assets <= 0:
+            return None
+
+        return sales / total_assets
