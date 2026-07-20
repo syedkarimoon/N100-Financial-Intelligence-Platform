@@ -34,23 +34,52 @@ class ScreenerEngine:
             self.config = yaml.safe_load(file)
 
     def load_financial_ratios(self):
-        """
-        Load financial ratios along with sector information.
-        """
+      """
+      Load financial ratios along with sector information.
+      Keep only the latest financial year for each company.
+      """
 
-        query = """
-        SELECT
-            fr.*,
-            s.broad_sector,
-            s.sub_sector
-        FROM financial_ratios fr
-        LEFT JOIN sectors s
-            ON fr.company_id = s.company_id
-        """
+      query = """
+       SELECT
+         fr.*,
+         s.broad_sector,
+         s.sub_sector
+       FROM financial_ratios fr
+       LEFT JOIN sectors s
+         ON fr.company_id = s.company_id
+      """
 
-        df = pd.read_sql_query(query, self.conn)
+      df = pd.read_sql_query(query, self.conn)
 
-        return df
+      # ---------------------------------------------------------
+      # Keep only the latest financial year for each company
+      # ---------------------------------------------------------
+
+      year_order = {
+        "Mar 2014": 2014,
+        "Mar 2015": 2015,
+        "Mar 2016": 2016,
+        "Mar 2017": 2017,
+        "Mar 2018": 2018,
+        "Mar 2019": 2019,
+        "Mar 2020": 2020,
+        "Mar 2021": 2021,
+        "Mar 2022": 2022,
+        "Mar 2023": 2023,
+        "Mar 2024": 2024,
+        "Mar 2025": 2025
+     }
+
+      df["year_sort"] = df["year"].str.extract(r"(\d{4})").astype(int)
+      df = (
+         df.sort_values("year_sort")
+          .groupby("company_id", as_index=False)
+          .tail(1)
+          .drop(columns="year_sort")
+          .reset_index(drop=True)
+      )
+
+      return df
 
     def apply_filters(self, df, filters):
         """

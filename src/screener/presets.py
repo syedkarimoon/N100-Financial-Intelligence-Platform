@@ -73,7 +73,7 @@ class PresetScreeners:
             "pat_cagr": {
                 "column": "pat_cagr_5yr",
                 "operator": ">=",
-                "value": 20
+                "value": 30
             },
             "revenue_cagr": {
                 "column": "revenue_cagr_5yr",
@@ -100,7 +100,7 @@ class PresetScreeners:
             "dividend_payout": {
                 "column": "dividend_payout_ratio_pct",
                 "operator": "<=",
-                "value": 80
+                "value": 30
             },
             "fcf": {
                 "column": "free_cash_flow_cr",
