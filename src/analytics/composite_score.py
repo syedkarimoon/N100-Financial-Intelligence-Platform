@@ -7,17 +7,27 @@ class CompositeScoreEngine:
     Composite Quality Score Engine
 
     Calculates:
-        • Profitability Score
-        • Cash Quality Score
-        • Growth Score
-        • Leverage Score
 
-    Final output:
-        Composite Score (0–100)
+    1. Profitability Score (35%)
+        - ROE
+        - Net Profit Margin
+
+    2. Cash Quality Score (30%)
+        - Free Cash Flow
+        - CFO/PAT Ratio
+        - Positive FCF Flag
+
+    3. Growth Score (20%)
+        - Revenue CAGR
+        - PAT CAGR
+
+    4. Leverage Score (15%)
+        - Debt/Equity
+        - Interest Coverage
+
+    Final Output:
+        Composite Score (0-100)
     """
-
-    def __init__(self):
-        pass
 
     # ---------------------------------------------------------
     # Winsorization
@@ -25,24 +35,20 @@ class CompositeScoreEngine:
 
     @staticmethod
     def winsorize(series):
-        """
-        Cap extreme values using the
-        10th and 90th percentiles.
-        """
 
-        s = series.copy()
-
-        s = pd.to_numeric(s, errors="coerce")
+        s = pd.to_numeric(
+            series,
+            errors="coerce"
+        )
 
         p10 = s.quantile(0.10)
         p90 = s.quantile(0.90)
 
-        s = s.clip(
+        return s.clip(
             lower=p10,
             upper=p90
         )
 
-        return s
 
     # ---------------------------------------------------------
     # Normalization
@@ -50,14 +56,6 @@ class CompositeScoreEngine:
 
     @staticmethod
     def normalize(series, reverse=False):
-        """
-        Convert values to 0–100 scale.
-
-        reverse=True
-            Used for metrics where
-            smaller is better
-            (Debt/Equity)
-        """
 
         s = CompositeScoreEngine.winsorize(series)
 
@@ -65,16 +63,20 @@ class CompositeScoreEngine:
         maximum = s.max()
 
         if pd.isna(minimum) or pd.isna(maximum):
+
             return pd.Series(
-                np.zeros(len(s)),
+                0,
                 index=s.index
             )
 
-        if maximum == minimum:
+
+        if minimum == maximum:
+
             return pd.Series(
-                np.full(len(s), 100),
+                100,
                 index=s.index
             )
+
 
         score = (
             (s - minimum)
@@ -82,10 +84,13 @@ class CompositeScoreEngine:
             (maximum - minimum)
         ) * 100
 
+
         if reverse:
             score = 100 - score
 
+
         return score.round(2)
+
 
     # ---------------------------------------------------------
     # Positive Flag
@@ -93,149 +98,298 @@ class CompositeScoreEngine:
 
     @staticmethod
     def positive_flag(series):
-        """
-        Positive values -> 100
 
-        Zero/Negative -> 0
-        """
+        return np.where(
+            series > 0,
+            100,
+            0
+        )
 
-        return np.where(series > 0, 100, 0)
 
     # ---------------------------------------------------------
     # Safe Division
     # ---------------------------------------------------------
 
     @staticmethod
-    def safe_divide(numerator, denominator):
-        """
-        Prevent divide-by-zero.
-        """
+    def safe_divide(
+        numerator,
+        denominator
+    ):
 
-        denominator = denominator.replace(0, np.nan)
+        denominator = denominator.replace(
+            0,
+            np.nan
+        )
 
         return numerator / denominator
-        # ---------------------------------------------------------
+
+
+
+    # ---------------------------------------------------------
+    # Sector Relative Score
+    # ---------------------------------------------------------
+
+    def sector_relative_score(
+    self,
+    df,
+    score_column="composite_score",
+    sector_column="broad_sector"
+    ):
+       """
+       Calculate sector-relative percentile score.
+
+       If sector information is unavailable,
+       return the dataframe without failing.
+       """
+
+       df = df.copy()
+
+       # Check required columns
+       if sector_column not in df.columns:
+         df["sector_relative_score"] = np.nan
+         return df
+
+       if score_column not in df.columns:
+        raise KeyError(f"'{score_column}' column not found.")
+
+       def normalize_sector(group):
+
+         minimum = group[score_column].min()
+         maximum = group[score_column].max()
+
+         if minimum == maximum:
+            group["sector_relative_score"] = 50
+         else:
+            group["sector_relative_score"] = (
+                (group[score_column] - minimum)
+                /
+                (maximum - minimum)
+            ) * 100
+
+            return group
+
+       return (
+        df
+        .groupby(
+            sector_column,
+            group_keys=False
+        )
+        .apply(normalize_sector)
+    )
+
+
+
+    # ---------------------------------------------------------
     # Profitability Score (35%)
     # ---------------------------------------------------------
 
-    def calculate_profitability_score(self, df):
+    def calculate_profitability_score(
+        self,
+        df
+    ):
 
-        roe = self.normalize(df["return_on_equity_pct"])
-
-        npm = self.normalize(df["net_profit_margin_pct"])
-
-        # ROCE not available in current project.
-        # Redistribute its 10% weight equally.
-        profitability = (
-            roe * 0.20 +
-            npm * 0.15
+        roe = self.normalize(
+            df["return_on_equity_pct"]
         )
 
-        return profitability.round(2)
+
+        npm = self.normalize(
+            df["net_profit_margin_pct"]
+        )
+
+
+        score = (
+
+            roe * 0.20
+            +
+            npm * 0.15
+
+        )
+
+
+        return score.round(2)
+
+
 
     # ---------------------------------------------------------
     # Cash Quality Score (30%)
     # ---------------------------------------------------------
 
-    def calculate_cash_quality_score(self, df):
+    def calculate_cash_quality_score(
+        self,
+        df
+    ):
 
-        fcf = self.normalize(df["free_cash_flow_cr"])
 
-        cfo_pat = self.normalize(df["cfo_pat_ratio"])
-
-        fcf_flag = self.positive_flag(
+        fcf = self.normalize(
             df["free_cash_flow_cr"]
         )
 
-        cash_score = (
-            fcf * 0.15 +
-            cfo_pat * 0.10 +
-            fcf_flag * 0.05
+
+        cfo_pat = self.normalize(
+            df["cfo_pat_ratio"]
         )
 
-        return cash_score.round(2)
+
+        positive_fcf = self.positive_flag(
+            df["free_cash_flow_cr"]
+        )
+
+
+        score = (
+
+            fcf * 0.15
+            +
+            cfo_pat * 0.10
+            +
+            positive_fcf * 0.05
+
+        )
+
+
+        return score.round(2)
+
 
     # ---------------------------------------------------------
     # Growth Score (20%)
     # ---------------------------------------------------------
 
-    def calculate_growth_score(self, df):
+    def calculate_growth_score(
+        self,
+        df
+    ):
+
 
         revenue = self.normalize(
             df["revenue_cagr_5yr"]
         )
 
+
         pat = self.normalize(
             df["pat_cagr_5yr"]
         )
 
-        growth = (
-            revenue * 0.10 +
+
+        score = (
+
+            revenue * 0.10
+            +
             pat * 0.10
+
         )
 
-        return growth.round(2)
+
+        return score.round(2)
+
+
 
     # ---------------------------------------------------------
     # Leverage Score (15%)
     # ---------------------------------------------------------
 
-    def calculate_leverage_score(self, df):
+    def calculate_leverage_score(
+        self,
+        df
+    ):
+
 
         debt = self.normalize(
             df["debt_to_equity"],
             reverse=True
         )
 
+
         icr = self.normalize(
             df["interest_coverage"]
         )
 
-        leverage = (
-            debt * 0.10 +
+
+        score = (
+
+            debt * 0.10
+            +
             icr * 0.05
+
         )
 
-        return leverage.round(2)
+
+        return score.round(2)
+
+
 
     # ---------------------------------------------------------
-    # Composite Score
+    # Final Composite Score
     # ---------------------------------------------------------
 
-    def calculate_composite_score(self, df):
+    def calculate_composite_score(
+        self,
+        df
+    ):
+
 
         data = df.copy()
 
+
         # CFO / PAT Ratio
+
         data["cfo_pat_ratio"] = self.normalize(
-            data["cash_from_operations_cr"],
-    
+           data["cash_from_operations_cr"]
+        )
+        
+        data["profitability_score"] = (
+            self.calculate_profitability_score(data)
         )
 
-        data["profitability_score"] = \
-            self.calculate_profitability_score(data)
 
-        data["cash_quality_score"] = \
+        data["cash_quality_score"] = (
             self.calculate_cash_quality_score(data)
+        )
 
-        data["growth_score"] = \
+
+        data["growth_score"] = (
             self.calculate_growth_score(data)
+        )
 
-        data["leverage_score"] = \
+
+        data["leverage_score"] = (
             self.calculate_leverage_score(data)
+        )
+
+
 
         data["composite_score"] = (
-            data["profitability_score"] +
-            data["cash_quality_score"] +
-            data["growth_score"] +
-            data["leverage_score"]
-        ).round(2)
 
-        data["composite_score"] = data[
-            "composite_score"
-        ].clip(
-            lower=0,
-            upper=100
+            data["profitability_score"]
+            +
+            data["cash_quality_score"]
+            +
+            data["growth_score"]
+            +
+            data["leverage_score"]
+
         )
+
+
+        data["composite_score"] = (
+
+            data["composite_score"]
+            .clip(
+                lower=0,
+                upper=100
+            )
+            .round(2)
+
+        )
+
+
+        # Sector Relative Score (only if sector data is available)
+        if "broad_sector" in data.columns:
+          data = self.sector_relative_score(data)
+          data["sector_relative_score"] = (
+            data["sector_relative_score"]
+            .round(2)
+          )
+        else:
+          data["sector_relative_score"] = np.nan
 
         return data

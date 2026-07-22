@@ -258,7 +258,7 @@ class CompanyScorer:
         )
 
         print("=" * 60)
-        # --------------------------------------------------
+    # --------------------------------------------------
     # Main Pipeline
     # --------------------------------------------------
 
@@ -266,8 +266,11 @@ class CompanyScorer:
 
         # Load latest record for every company
         df = self.load_data()
-
-        # Calculate composite score
+        
+        print("\n========== DEBUG COLUMNS ==========")
+        print(df.columns.tolist())
+        print("===================================")
+        
         df = self.engine.calculate_composite_score(df)
         missing = df[df["composite_score"].isna()]
 

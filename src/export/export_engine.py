@@ -10,6 +10,8 @@ from pathlib import Path
 import sqlite3
 
 import pandas as pd
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 
 from src.screener.presets import PresetScreeners
 
@@ -187,10 +189,55 @@ class ExportEngine:
                 sheet_name="Debt Free Blue Chip",
                 index=False
             )
+            # ============================================
+            # Workbook Formatting
+            # ============================================
 
-        print("\nWorkbook created successfully")
-        print(self.output_file)
+            workbook = writer.book
 
+            header_fill = PatternFill(
+                fill_type="solid",
+                start_color="1F4E78",
+                end_color="1F4E78"
+            )
+
+            header_font = Font(
+                color="FFFFFF",
+                bold=True
+            )
+
+            for worksheet in workbook.worksheets:
+
+                # Freeze first row
+                worksheet.freeze_panes = "A2"
+
+                # Enable filter
+                worksheet.auto_filter.ref = worksheet.dimensions
+
+                # Header formatting
+                for cell in worksheet[1]:
+
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(
+                        horizontal="center",
+                        vertical="center"
+                    )
+
+                # Auto width
+                for column in worksheet.columns:
+
+                    length = max(
+                        len(str(cell.value))
+                        if cell.value is not None else 0
+                        for cell in column
+                    )
+
+                    worksheet.column_dimensions[
+                        get_column_letter(column[0].column)
+                    ].width = min(length + 3, 30)
+            print("\nWorkbook created successfully")
+            print(self.output_file)    
     # --------------------------------------------------
     # Run
     # --------------------------------------------------
@@ -198,7 +245,6 @@ class ExportEngine:
     def run(self):
 
         self.export_excel()
-
 
 if __name__ == "__main__":
 
